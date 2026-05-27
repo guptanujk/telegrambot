@@ -20,6 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
+PHOTO_DIR = os.getenv("PHOTO_DIR")
+DB_FILE = os.getenv("DB_FILE")
 TOKEN = os.getenv("BOT_TOKEN")
 
 #print("TOKEN:", TOKEN)
@@ -140,7 +142,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data()
 
     await update.message.reply_text(
-        f"First capture starts NOW 📸\n\nMinute: {current_time}\n\nSend a photo."
+        f"First capture starts NOW 📸\nSend a photo."
     )
 
     # Schedule next random moment
