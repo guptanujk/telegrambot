@@ -3,6 +3,8 @@ import json
 import random
 from datetime import datetime, timedelta
 
+from dotenv import load_dotenv
+
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -14,9 +16,15 @@ from telegram.ext import (
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# ---------------- CONFIG ---------------- #
+# ---------------- LOAD ENV ---------------- #
+
+load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
+
+#print("TOKEN:", TOKEN)
+
+# ---------------- CONFIG ---------------- #
 
 DATA_FILE = "database.json"
 
@@ -40,7 +48,7 @@ def save_data():
 
 ALL_MINUTES = []
 
-# Allowed time: 7 AM -> 11:59 PM
+# Allowed hours: 7 AM -> 11:59 PM
 for h in range(7, 24):
     for m in range(60):
         ALL_MINUTES.append(f"{h:02d}:{m:02d}")
@@ -62,11 +70,11 @@ def get_random_unused_minute(user_id):
 async def send_capture_message(application, chat_id, minute):
     await application.bot.send_message(
         chat_id=chat_id,
-        text=f"Capture this moment 📸\nMinute: {minute}"
+        text=f"Capture this moment 📸\n\nMinute: {minute}"
     )
 
 
-# ---------------- SCHEDULE ---------------- #
+# ---------------- SCHEDULER ---------------- #
 
 def schedule_next_capture(application, user_id, chat_id):
     minute = get_random_unused_minute(user_id)
@@ -85,7 +93,7 @@ def schedule_next_capture(application, user_id, chat_id):
         microsecond=0
     )
 
-    # If time already passed today -> tomorrow
+    # If already passed today -> tomorrow
     if run_time <= now:
         run_time += timedelta(days=1)
 
@@ -121,10 +129,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data()
 
-    # Create folder for user
+    # Create user folder
     os.makedirs(f"photos/{user_id}", exist_ok=True)
 
-    # FIRST PHOTO = current time
+    # First photo = NOW
     current_time = datetime.now().strftime("%H:%M")
 
     data["users"][user_id]["current_minute"] = current_time
@@ -135,7 +143,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"First capture starts NOW 📸\n\nMinute: {current_time}\n\nSend a photo."
     )
 
-    # Schedule next random minute
+    # Schedule next random moment
     schedule_next_capture(
         context.application,
         user_id,
@@ -174,7 +182,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data()
 
     await update.message.reply_text(
-        f"Moment saved Successfully✅"
+        f"Moment saved successfully ✅"
     )
 
 
