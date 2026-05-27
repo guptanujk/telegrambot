@@ -20,17 +20,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
+TOKEN = os.getenv("BOT_TOKEN")
 PHOTO_DIR = os.getenv("PHOTO_DIR")
 DB_FILE = os.getenv("DB_FILE")
-TOKEN = os.getenv("BOT_TOKEN")
-
-#print("TOKEN:", TOKEN)
 
 # ---------------- CONFIG ---------------- #
 
-DATA_FILE = "database.json"
+DATA_FILE = DB_FILE
 
 scheduler = BackgroundScheduler()
+
+# Create DB folder if not exists
+os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
 
 # ---------------- DATABASE ---------------- #
 
@@ -95,7 +96,7 @@ def schedule_next_capture(application, user_id, chat_id):
         microsecond=0
     )
 
-    # If already passed today -> tomorrow
+    # If time already passed today -> tomorrow
     if run_time <= now:
         run_time += timedelta(days=1)
 
@@ -131,8 +132,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data()
 
-    # Create user folder
-    os.makedirs(f"photos/{user_id}", exist_ok=True)
+    # Create user photo folder
+    os.makedirs(f"{PHOTO_DIR}/{user_id}", exist_ok=True)
 
     # First photo = NOW
     current_time = datetime.now().strftime("%H:%M")
@@ -142,7 +143,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data()
 
     await update.message.reply_text(
-        f"First capture starts NOW 📸\nSend a photo."
+        f"First capture starts NOW 📸\n\nSend a photo."
     )
 
     # Schedule next random moment
@@ -160,6 +161,13 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = str(user.id)
 
+    # Ignore if user not started
+    if user_id not in data["users"]:
+        await update.message.reply_text(
+            "Please start the bot first using /start"
+        )
+        return
+
     minute = data["users"][user_id]["current_minute"]
 
     photo = update.message.photo[-1]
@@ -168,23 +176,31 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     filename = f"{datetime.now().timestamp()}.jpg"
 
-    path = f"photos/{user_id}/{filename}"
+    # Create user folder if missing
+    user_folder = f"{PHOTO_DIR}/{user_id}"
 
+    os.makedirs(user_folder, exist_ok=True)
+
+    path = f"{user_folder}/{filename}"
+
+    # Download image
     await file.download_to_drive(path)
 
+    # Save DB entry
     data["users"][user_id]["entries"].append({
         "minute": minute,
         "date": str(datetime.now()),
         "photo": path
     })
 
+    # Save used minute
     if minute not in data["users"][user_id]["used_minutes"]:
         data["users"][user_id]["used_minutes"].append(minute)
 
     save_data()
 
     await update.message.reply_text(
-        f"Moment saved successfully ✅"
+        "Moment saved successfully ✅"
     )
 
 
