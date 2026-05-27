@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # ---------------- CONFIG ---------------- #
 
-TOKEN = "8679693153:AAGrZQDAoVQZzt8AMdsLVT1mShmj1_QQLRw"
+TOKEN = os.getenv("BOT_TOKEN")
 
 DATA_FILE = "database.json"
 
